@@ -50,6 +50,7 @@ services:
         volumes:
             - '/data/pritunl/pritunl:/var/lib/pritunl'
             - '/data/pritunl/mongodb:/var/lib/mongodb'
+            - '/etc/localtime:/etc/localtime:ro'
 EOF
 
 print_colored "$GREEN" "[Success] Docker images loaded and docker-compose.yaml created"
