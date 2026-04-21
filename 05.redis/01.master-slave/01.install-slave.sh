@@ -9,6 +9,8 @@ NC='\033[0m'  # No Color
 
 Redis_version="7.4.8"
 Port="6379"
+Master_IP="10.0.0.181"
+Master_Port="6379"
 
 # 0. Function to print colored messages
 print_colored() {
@@ -84,28 +86,28 @@ EOF
 source /etc/profile
 
 # 9. configure redis
-mkdir -pv /data/$PORT/{data,etc,log,run,backup}
+mkdir -pv /data/$Port/{data,etc,log,run,backup}
 useradd -r -s /sbin/nologin redis
-chown -R redis.redis /data/$PORT/
-chmod -R 700 /data/$PORT
+chown -R redis.redis /data/$Port/
+chmod -R 700 /data/$Port
 
-cp /usr/local/redis/redis.conf /data/$PORT/etc/redis.conf
-cat >> /data/$PORT/etc/redis.conf << EOF
+cp /usr/local/redis/redis.conf /data/$Port/etc/redis.conf
+cat >> /data/$Port/etc/redis.conf << EOF
 ####################################### basic configuration
 bind 0.0.0.0
-port  $PORT
-unixsocket /data/$PORT/run/redis.sock
+port  $Port
+unixsocket /data/$Port/run/redis.sock
 supervised systemd
-dir /data/$PORT/data
-pidfile /data/$PORT/run/redis.pid
-logfile "/data/$PORT/log/redis.log"
+dir /data/$Port/data
+pidfile /data/$Port/run/redis.pid
+logfile "/data/$Port/log/redis.log"
 ####################################### connection configuration
 maxclients 10000
 requirepass 123456
 maxmemory 1024MB
 ######################################## persistence configuration
 appendonly yes
-appendfilename "appendonly-$PORT.aof"
+appendfilename "appendonly-$Port.aof"
 appendfsync everysec
 no-appendfsync-on-rewrite yes
 auto-aof-rewrite-percentage 100
@@ -121,9 +123,10 @@ rename-command KEYS ""
 masterauth 123456
 min-slaves-to-write 0
 min-slaves-max-lag 15
+slaveof $Master_IP $Master_Port
+slave-read-only yes
 EOF
 print_colored "$GREEN" "[Success] Redis conf configured"
-
 
 # 10. configure redis systemd service
 cat > /usr/lib/systemd/system/redis.service<< EOF
@@ -132,7 +135,7 @@ Description=Redis Server
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/redis-server /data/$PORT/etc/redis.conf
+ExecStart=/usr/local/bin/redis-server /data/$Port/etc/redis.conf
 Type=notify
 User=redis
 Group=redis
