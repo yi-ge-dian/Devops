@@ -8,6 +8,7 @@ GREEN='\033[0;32m'
 NC='\033[0m'  # No Color
 
 Redis_version="7.4.8"
+Port="6379"
 
 # 0. Function to print colored messages
 print_colored() {
@@ -83,35 +84,43 @@ EOF
 source /etc/profile
 
 # 9. configure redis
-mkdir -pv /data/6379/{data,etc,log,run,backup}
+mkdir -pv /data/$PORT/{data,etc,log,run,backup}
 useradd -r -s /sbin/nologin redis
-chown -R redis.redis /data/6379/
-chmod -R 700 /data/6379
+chown -R redis.redis /data/$PORT/
+chmod -R 700 /data/$PORT
 
-cp /usr/local/redis/redis.conf /data/6379/etc/redis.conf
-cat >> /data/6379/etc/redis.conf << EOF 
+cp /usr/local/redis/redis.conf /data/$PORT/etc/redis.conf
+cat >> /data/$PORT/etc/redis.conf << EOF
+####################################### basic configuration
 bind 0.0.0.0
-port  6379
-unixsocket /data/6379/run/redis.sock
+port  $PORT
+unixsocket /data/$PORT/run/redis.sock
 supervised systemd
-dir /data/6379/data
-pidfile /data/6379/run/redis.pid
-logfile "/data/6379/log/redis.log"
+dir /data/$PORT/data
+pidfile /data/$PORT/run/redis.pid
+logfile "/data/$PORT/log/redis.log"
+####################################### connection configuration
 maxclients 10000
 requirepass 123456
-maxmemory 4096MB
+maxmemory 1024MB
+######################################## persistence configuration
 appendonly yes
-appendfilename "appendonly-6379.aof"
+appendfilename "appendonly-$PORT.aof"
 appendfsync everysec
 no-appendfsync-on-rewrite yes
 auto-aof-rewrite-percentage 100
 auto-aof-rewrite-min-size 1024MB
+####################################### safe configuration
 rename-command CONFIG ""
 rename-command FLUSHDB ""
 rename-command FLUSHALL ""
 rename-command DEBUG ""
 rename-command SHUTDOWN ""
 rename-command KEYS ""
+####################################### master-slave configuration
+masterauth 123456
+min-slaves-to-write 0
+min-slaves-max-lag 15
 EOF
 print_colored "$GREEN" "[Success] Redis conf configured"
 
@@ -123,7 +132,7 @@ Description=Redis Server
 After=network.target
 
 [Service]
-ExecStart=/usr/local/bin/redis-server /data/6379/etc/redis.conf
+ExecStart=/usr/local/bin/redis-server /data/$PORT/etc/redis.conf
 Type=notify
 User=redis
 Group=redis

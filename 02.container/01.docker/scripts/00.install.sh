@@ -154,7 +154,7 @@ docker version
 
 
 # 8. install docker-compose
-docker_compose_file="docker-compose-Linux-${arch}"
+docker_compose_file="docker-compose-linux-${arch}"
 if [[ -f "$docker_compose_file" ]]; then
     print_colored "$GREEN" "[Success] Docker Compose file already exists"
 else
