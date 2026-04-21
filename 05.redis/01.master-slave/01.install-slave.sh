@@ -77,6 +77,7 @@ print_colored "$GREEN" "[Success] Redis installed"
 
 # 7. redis version
 cd /usr/local/
+chown -R redis.redis /usr/local/redis/
 redis-server -v
 
 # 8. congfiue path redis
@@ -113,7 +114,6 @@ no-appendfsync-on-rewrite yes
 auto-aof-rewrite-percentage 100
 auto-aof-rewrite-min-size 1024MB
 ####################################### safe configuration
-rename-command CONFIG ""
 rename-command FLUSHDB ""
 rename-command FLUSHALL ""
 rename-command DEBUG ""
