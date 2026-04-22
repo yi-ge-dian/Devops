@@ -145,8 +145,21 @@ else
     exit 1
 fi
 
-# e.g.create replication user and database for testing
-# CREATE USER my_user WITH PASSWORD '123456'; # 创建 my_user 专属数据库用户（替换为你的强密码）, 默认具有登录权限
-# CREATE DATABASE my_database OWNER my_user;  # 创建 my_database 专属数据库，所有者为 my_user 用户
-# DROP DATABASE my_database;                  # 删除 my_database 数据库
-# DROP USER my_user;                          # 删除 my_user 用户
+# e.g.create user
+# 创建 my_user 用户，并设置密码为 123456，user 默认具有登录权限
+# CREATE USER my_user WITH PASSWORD '123456';
+
+# 创建 my_role 角色，并设置密码为 123456，role 默认不具有登录权限,如果想要登录权限，请使用 WITH LOGIN
+# CREATE ROLE my_role WITH LOGIN PASSWORD '123456';
+
+# 创建 my_database 数据库，所有者为 my_user 用户
+# CREATE DATABASE my_database OWNER my_user;
+
+# 创建 my_database 数据库，所有者为 my_role 角色
+# CREATE DATABASE my_database OWNER my_role;
+
+# 删除 my_database 数据库
+# DROP DATABASE my_database;
+
+# 删除 my_user 用户
+# DROP USER my_user;
