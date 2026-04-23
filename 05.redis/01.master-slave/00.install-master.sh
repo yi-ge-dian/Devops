@@ -100,6 +100,9 @@ supervised systemd
 dir /data/$Port/data
 pidfile /data/$Port/run/redis.pid
 logfile "/data/$Port/log/redis.log"
+####################################### slow log configuration
+slowlog-log-slower-than 100000
+slowlog-max-len 128
 ####################################### connection configuration
 maxclients 10000
 requirepass 123456
