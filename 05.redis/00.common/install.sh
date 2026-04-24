@@ -126,7 +126,7 @@ EOF
 print_colored "$GREEN" "[Success] Redis conf configured"
 
 # 配置 systemd
-cat > /usr/lib/systemd/system/redis${Port}.service << EOF
+cat > /usr/lib/systemd/system/redis$Port.service << EOF
 [Unit]
 Description=Redis Server
 After=network.target
