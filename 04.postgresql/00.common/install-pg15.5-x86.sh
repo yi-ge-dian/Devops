@@ -1,31 +1,39 @@
 #!/bin/bash
 
-# Color definitions
+# 色卡
 RED='\033[0;31m'
 BLUE='\033[0;34m'
 YELLOW='\033[0;33m'
 GREEN='\033[0;32m'
 NC='\033[0m'  # No Color
 
-# 0. Function to print colored messages
+# 颜色打印函数
 print_colored() {
     local color="$1"
     local message="$2"
     echo -e "${color}${message}${NC}"
 }
 
-# 1. check if the script is run as root
+# 校验是否为 root 用户
 if [[ $EUID -ne 0 ]]; then
    print_colored "$RED" "[Error] This script must be run as root"
    exit 1
 fi
 
-# 2. get the architecture of the system
+# 获得 CPU 架构
 arch=$(uname -m)
-print_colored "$BLUE" "System architecture: $arch"
+if [[ "$arch" == "x86_64" ]]; then
+    print_colored "$GREEN" "[Success] Machine architecture: x86_64"
+elif [[ "$arch" == "aarch64" ]]; then
+    print_colored "$GREEN" "[Success] Machine architecture: aarch64"
+else
+    print_colored "$RED" "[Error] Unsupported machine architecture: $arch"
+    exit 1
+fi
 
+Port="5432"
 
-# 3. download and install PostgreSQL 15.5 RPM packages
+# 下载 PostgreSQL 15.5 RPM 包
 mkdir /usr/local/pg15.5-rpm && cd /usr/local/pg15.5-rpm
 if [[ -f postgresql15-libs-15.5-1PGDG.rhel7.x86_64.rpm ]]; then
     print_colored "$GREEN" "PostgreSQL 15.5 RPM packages already downloaded"
@@ -62,40 +70,39 @@ rpm -ivh postgresql15-15.5-1PGDG.rhel7.x86_64.rpm
 rpm -ivh postgresql15-server-15.5-1PGDG.rhel7.x86_64.rpm
 
 
-# 4. create user and set password for postgres
+# 创建 PostgreSQL 用户
 useradd -r -s /sbin/nologin postgres
 
-# 5. create directories for data, log, run, backup and archive, because etc file in data directory, so we don't create it separately.
-mkdir -pv /data/5432/{archive,backup,data,log,run}
+# 创建目录，配置文件存在于 data 目录下，所以不需要单独创建 etc 目录
+mkdir -pv /data/$Port/{archive,backup,data,log,run}
 
-# 6. set up symbolic links and permissions
+# 创建软链接，方便使用
 ln -s /usr/pgsql-15 /usr/local/pgsql
 chown -R postgres.postgres /usr/local/pgsql/
-chown -R postgres.postgres /data/5432
-chmod 700 /data/5432
+chown -R postgres.postgres /data/$Port
+chmod 700 /data/$Port
 
-# 7. set environment variables for postgres user
+# 设置环境变量
 cat >> /etc/profile << 'EOF'
 export PGHOME=/usr/local/pgsql
-export PGHOST=/data/5432/run
-export PGPORT=5432
-export PGDATA=/data/5432/data
+export PGHOST=/data/$Port/run
+export PGPORT=$Port
+export PGDATA=/data/$Port/data
 export PGUSER=postgres
 export PATH=$PGHOME/bin:$PATH
 EOF
 source /etc/profile
 
-# 8. initialize the database cluster
-su -s /bin/bash postgres -c "initdb -D /data/5432/data -U postgres -E UTF8 --locale=zh_CN.UTF-8"
+# 初始化数据库
+su -s /bin/bash postgres -c "initdb -D /data/$Port/data -U postgres -E UTF8 --locale=zh_CN.UTF-8"
 
-# 9. please mannualy edit the postgresql.conf and pg_hba.conf files to set the appropriate configurations for your environment
-# such as listen_addresses, port, authentication methods, etc.
-cp -a /data/5432/data/pg_hba.conf /data/5432/data/pg_hba.conf.bak
-cp -a /data/5432/data/postgresql.conf /data/5432/data/postgresql.conf.bak
+# 请手动编辑 postgresql.conf 和 pg_hba.conf 文件，以设置适合您环境的适当配置
+cp -a /data/$Port/data/pg_hba.conf /data/$Port/data/pg_hba.conf.bak
+cp -a /data/$Port/data/postgresql.conf /data/$Port/data/postgresql.conf.bak
 
-# 10. perf ormance tuning for postgresql.conf, you can adjust the values based on your system resources and workload requirements
+# 通过 postgresql.conf 文件，可以调整 PostgreSQL 的性能，以适应您的系统资源和工作负载要求
 
-# shared_buffers should be set to 25% of total system memory
+# 1. shared_buffers should be set to 25% of total system memory
 total_memory=$(free -g | awk '/^Mem:/{print $2}')
 calculated_shared_buffers=$(( (total_memory + 3) / 4 ))
 # set shared_buffers to the calculated value, but not less than 1GB
@@ -107,15 +114,15 @@ fi
 
 echo "Calculated shared_buffers: ${shared_buffers}GB"
 
-cat >> /data/5432/data/postgresql.conf << EOF
-external_pid_file = '/data/5432/run/postmaster.pid'
+cat >> /data/$Port/data/postgresql.conf << EOF
+external_pid_file = '/data/$Port/run/postmaster.pid'
 listen_addresses= '*'
-port = 5432
+port = $Port
 max_connections = 500
-unix_socket_directories = '/data/5432/run'
+unix_socket_directories = '/data/$Port/run'
 shared_buffers = ${shared_buffers}GB 
 logging_collector=on
-log_directory='/data/5432/log'
+log_directory='/data/$Port/log'
 log_filename = 'postgresql-%a.log'
 log_rotation_age = 1d
 log_rotation_size = 1GB
@@ -127,14 +134,14 @@ wal_level = replica
 max_wal_senders = 10
 wal_sender_timeout = 60s
 archive_mode = on
-archive_command = 'test ! -f /data/5432/archive/%f && cp %p /data/5432/archive/%f'
+archive_command = 'test ! -f /data/$Port/archive/%f && cp %p /data/$Port/archive/%f'
 EOF
 
-# 11. set up systemd service for PostgreSQL
-cp -a /usr/lib/systemd/system/postgresql-15.service /usr/lib/systemd/system/postgresql.service
-sed -i 's#Environment=PGDATA=/var/lib/pgsql/15/data/#Environment=PGDATA=/data/5432/data/#g' /usr/lib/systemd/system/postgresql.service
-sed -i 's#ExecStartPre=/usr/pgsql-15/#ExecStartPre=/usr/local/pgsql/#g' /usr/lib/systemd/system/postgresql.service
-sed -i 's#ExecStart=/usr/pgsql-15/#ExecStart=/usr/local/pgsql/#g' /usr/lib/systemd/system/postgresql.service
+# 系统服务启动
+cp -a /usr/lib/systemd/system/postgresql-15.service /usr/lib/systemd/system/postgresql$Port.service
+sed -i 's#Environment=PGDATA=/var/lib/pgsql/15/data/#Environment=PGDATA=/data/$Port/data/#g' /usr/lib/systemd/system/postgresql$Port.service
+sed -i 's#ExecStartPre=/usr/pgsql-15/#ExecStartPre=/usr/local/pgsql/#g' /usr/lib/systemd/system/postgresql$Port.service
+sed -i 's#ExecStart=/usr/pgsql-15/#ExecStart=/usr/local/pgsql/#g' /usr/lib/systemd/system/postgresql$Port.service
 systemctl daemon-reload
 systemctl enable postgresql --now
 if systemctl is-active --quiet postgresql; then
