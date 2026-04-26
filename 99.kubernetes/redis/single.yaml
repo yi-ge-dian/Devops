@@ -1,0 +1,81 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: cm-redis
+  namespace: xx # 项目名称
+data:
+  redis.conf: |
+    bind 0.0.0.0
+    port 6379
+    protected-mode no
+    requirepass 123456
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pvc-redis
+  namespace: xx # 项目名称
+spec:
+  storageClassName: nfs-client #使用存储类自行替换
+  accessModes:
+  - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10G
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: deploy-redis
+  namespace: xx # 项目名称
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: app-redis
+  template:
+    metadata:
+      labels:
+        app: app-redis
+    spec:
+      containers:
+      - image: redis:7.4.8
+        command: [ "redis-server", "/etc/redis/redis.conf" ]
+        name: redis
+        ports:
+        - containerPort: 6379
+        volumeMounts:
+        - name: volume-cm
+          mountPath: /etc/redis/redis.conf
+          subPath: redis.conf
+        - name: volume-pvc
+          mountPath: /data
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+      volumes:
+      - name: volume-cm
+        configMap:
+          name: cm-redis
+      - name: volume-pvc
+        persistentVolumeClaim:
+          claimName: pvc-redis
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: redis-svc
+  namespace: xx # 项目名称
+spec:
+  ports:
+  - name: tcp-redis-6379
+    protocol: TCP
+    port: 6379
+    targetPort: 6379
+  selector:
+    app: app-redis
