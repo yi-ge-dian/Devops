@@ -56,13 +56,6 @@ else
     wget https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-7-x86_64/postgresql15-server-15.5-1PGDG.rhel7.x86_64.rpm 
 fi
 
-if [[ -f postgresql15-contrib-15.5-1PGDG.rhel7.x86_64.rpm ]]; then
-    print_colored "$GREEN" "PostgreSQL 15.5 contrib RPM package already downloaded"
-else
-    print_colored "$YELLOW" "Downloading PostgreSQL 15.5 contrib RPM package..."
-    wget https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-7-x86_64/postgresql15-contrib-15.5-1PGDG.rhel7.x86_64.rpm
-fi
-
 yum -y install libzstd
 yum -y install libicu
 rpm -ivh postgresql15-libs-15.5-1PGDG.rhel7.x86_64.rpm
