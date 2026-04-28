@@ -34,11 +34,18 @@ fi
 Port="5432"
 
 # 下载 PostgreSQL 15.5 RPM 包
-mkdir /usr/local/pg15.5-rpm && cd /usr/local/pg15.5-rpm
-if [[ -f postgresql15-libs-15.5-1PGDG.rhel7.x86_64.rpm ]]; then
-    print_colored "$GREEN" "PostgreSQL 15.5 RPM packages already downloaded"
+# 判断目录是否存在
+if [[ -d "/usr/local/pg15.5-rpm" ]]; then
+    print_colored "$GREEN" "PostgreSQL 15.5 RPM packages directory already exists"
 else
-    print_colored "$YELLOW" "Downloading PostgreSQL 15.5 RPM packages..."
+    print_colored "$YELLOW" "Creating PostgreSQL 15.5 RPM packages directory..."
+    mkdir /usr/local/pg15.5-rpm
+fi
+cd /usr/local/pg15.5-rpm
+if [[ -f postgresql15-libs-15.5-1PGDG.rhel7.x86_64.rpm ]]; then
+    print_colored "$GREEN" "PostgreSQL 15.5 server RPM package already downloaded"
+else
+    print_colored "$YELLOW" "Downloading PostgreSQL 15.5 server RPM packages..."
     wget https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-7-x86_64/postgresql15-libs-15.5-1PGDG.rhel7.x86_64.rpm 
 fi
 
@@ -62,15 +69,6 @@ rpm -ivh postgresql15-libs-15.5-1PGDG.rhel7.x86_64.rpm
 rpm -ivh postgresql15-15.5-1PGDG.rhel7.x86_64.rpm
 rpm -ivh postgresql15-server-15.5-1PGDG.rhel7.x86_64.rpm
 
-# 创建目录，配置文件存在于 data 目录下，所以不需要单独创建 etc 目录
-mkdir -pv /data/$Port/{archive,backup,data,log,run}
-
-# 创建软链接，方便使用
-ln -s /usr/pgsql-15 /usr/local/pgsql
-chown -R postgres.postgres /usr/local/pgsql/
-chown -R postgres.postgres /data/$Port
-chmod 700 /data/$Port
-
 # 设置环境变量
 cat >> /etc/profile << EOF
 export PGHOME=/usr/local/pgsql
@@ -78,9 +76,16 @@ export PGHOST=/data/$Port/run
 export PGPORT=$Port
 export PGDATA=/data/$Port/data
 export PGUSER=postgres
-export PATH=$PGHOME/bin:$PATH
+export PATH=\$PGHOME/bin:\$PATH
 EOF
 source /etc/profile
+
+# 创建目录，配置文件存在于 data 目录下，所以不需要单独创建 etc 目录
+mkdir -pv /data/$Port/{archive,backup,data,log,run}
+ln -s /usr/pgsql-15 /usr/local/pgsql
+chown -R postgres.postgres /usr/local/pgsql/
+chown -R postgres.postgres /data/$Port/
+chmod -R 700 /data/$Port
 
 # 初始化数据库
 sudo -iu postgres initdb -D /data/$Port/data -U postgres -E UTF8 --locale=zh_CN.UTF-8
