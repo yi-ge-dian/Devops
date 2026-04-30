@@ -68,6 +68,9 @@ yum -y install libicu
 rpm -ivh postgresql15-libs-15.5-1PGDG.rhel7.x86_64.rpm
 rpm -ivh postgresql15-15.5-1PGDG.rhel7.x86_64.rpm
 rpm -ivh postgresql15-server-15.5-1PGDG.rhel7.x86_64.rpm
+# 注释掉默认的环境变量
+sed -i 's/^PGDATA=/#PGDATA=/' /var/lib/pgsql/.bash_profile
+sed -i 's/^export PGDATA/#export PGDATA/' /var/lib/pgsql/.bash_profile
 
 # 设置环境变量
 cat >> /etc/profile << EOF

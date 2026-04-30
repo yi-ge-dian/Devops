@@ -38,6 +38,10 @@ fi
 # register_status: 注册状态
 # ./install-repmgr-master-x86.sh 10.0.0.61 1 primary
 
+host_ip=$1
+node_id=$2
+register_status=$3
+
 # host_ip 需要作为传入的参数，如果不传入报错
 if [ -z "$host_ip" ]; then
     print_colored "$RED" "[Error] host_ip is required"
@@ -69,7 +73,8 @@ register_status=$3
 # repmgr_15-llvmjit-5.3.3-1.rhel7.x86_64.rpm         02-Jan-2024 18:05               21736
 # repmgr_15-llvmjit-5.4.0-1.rhel7.x86_64.rpm         02-Jan-2024 18:05               22220
 # repmgr_15-llvmjit-5.4.1-1PGDG.rhel7.x86_64.rpm     02-Jan-2024 18:05               22496
-mkdir -p /usr/local/repmgr5.4.1-rpm && cd /usr/local/repmgr5.4.1-rpm
+mkdir -p /usr/local/repmgr5.4.1-rpm
+cd /usr/local/repmgr5.4.1-rpm
 if [[ -f repmgr-5.5.0-1.rhel7.x86_64.rpm ]]; then
     print_colored "$GREEN" "Repmgr 5.5.0 RPM package already downloaded"
 else
@@ -77,7 +82,7 @@ else
     wget https://download.postgresql.org/pub/repos/yum/15/redhat/rhel-7-x86_64/repmgr_15-5.4.1-1PGDG.rhel7.x86_64.rpm
 fi
 
-rpm -ivh repmgr-5.5.0-1.rhel7.x86_64.rpm
+rpm -ivh repmgr_15-5.4.1-1PGDG.rhel7.x86_64.rpm
 source /etc/profile
 
 # 创建 repmgr 用户
@@ -91,11 +96,11 @@ psql -c "ALTER USER repmgr SET search_path TO repmgr, public;"
 cat >> /data/5432/data/pg_hba.conf << EOF
 local repmgr repmgr md5
 host repmgr repmgr 127.0.0.1/32 md5
-host repmgr repmgr 0.0.0.0/24 md5
+host repmgr repmgr 0.0.0.0/0 md5
 
 local replication repmgr md5
 host replication repmgr 127.0.0.1/32 md5
-host replication repmgr 0.0.0.0/24 md5
+host replication repmgr 0.0.0.0/0 md5
 EOF
 
 # 重新加载配置
@@ -118,4 +123,4 @@ sudo -iu postgres repmgr -f /data/repmgr/etc/repmgr.conf $register_status regist
 sudo -iu postgres repmgr -f /data/repmgr/etc/repmgr.conf cluster show
 
 # 查看节点信息
-psql -c "select * from repmgr.nodes;"
+psql -d repmgr -c "select * from repmgr.nodes;"
