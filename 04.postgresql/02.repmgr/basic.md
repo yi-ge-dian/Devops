@@ -94,3 +94,17 @@ sudo -iu postgres repmgr -f /data/repmgr/etc/repmgr.conf -U repmgr -d repmgr clu
 psql -d repmgr -c "select * from repmgr.nodes;"
 ```
 
+62 节点切换为主，61 节点切换为备
+
+```shell
+# 62 节点执行
+sudo -iu postgres repmgr -f /data/repmgr/etc/repmgr.conf standby switchover --dry-run --force
+
+sudo -iu postgres repmgr -f /data/repmgr/etc/repmgr.conf standby switchover --force
+# 备库确实可以拉起为主库，但是旧主库无法指向新主库
+
+# 提前配一下三台机器的 ssh，postgres用户的免密
+
+# systemd
+```
+
