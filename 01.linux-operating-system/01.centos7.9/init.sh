@@ -61,7 +61,7 @@ yum makecache fast
 print_colored "$GREEN" "[Success] Software sources updated"
 
 # 安装必要的工具
-yum install -y vim wget net-tools lsof iotop chrony unzip tree gcc systemd-devel
+yum install -y vim wget net-tools lsof iotop chrony unzip tree gcc systemd-devel make
 if [[ $? -ne 0 ]]; then
     print_colored "$RED" "[Error] Failed to install necessary tools"
     exit 1

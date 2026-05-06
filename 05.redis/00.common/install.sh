@@ -33,6 +33,7 @@ fi
 
 Redis_version="7.4.8"
 Port="6379"
+# 修改最大内存
 
 # 优化系统参数
 cat > /etc/sysctl.conf << EOF
